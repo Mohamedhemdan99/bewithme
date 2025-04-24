@@ -127,7 +127,7 @@ export const authService = {
   },
 
   // Update user profile
-  async updateProfile(userData: Partial<UserProfile>) {
+  async updateProfile(userData: Partial<UserProfile> & { picture?: File | string | null; password?: string }) {
     try {
       const data = new FormData();
       

@@ -11,7 +11,7 @@ interface AuthContextType {
   login: (data: LoginFormData) => Promise<void>;
   register: (data: SignUpFormData) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  updateProfile: (data: Partial<UserProfile> & { picture?: File | string | null; password?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate('/');
   };
 
-  const updateProfile = async (data: Partial<UserProfile>) => {
+  const updateProfile = async (data: Partial<UserProfile> & { picture?: File | string | null; password?: string }) => {
     try {
       setIsLoading(true);
       const updatedUser = await authService.updateProfile(data);

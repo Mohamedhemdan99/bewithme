@@ -11,8 +11,17 @@ import { Eye, EyeOff, Edit, User, Calendar, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-interface EditableUserProfile extends Partial<UserProfile> {
+// Define an interface for the editable user profile that handles both string and File types for picture
+interface EditableUserProfile {
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  email?: string;
   picture?: File | string | null;
+  gender?: string;
+  dateOfBirth?: string;
+  role?: string;
+  rating?: number;
   password?: string;
 }
 
