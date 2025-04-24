@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { UserProfile } from '../services/authService';
@@ -11,17 +10,9 @@ import { Eye, EyeOff, Edit, User, Calendar, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-// Define an interface for the editable user profile that handles both string and File types for picture
-interface EditableUserProfile {
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  email?: string;
+// Define an interface for the editable user profile that matches what authService.updateProfile expects
+interface EditableUserProfile extends Partial<Omit<UserProfile, 'picture'>> {
   picture?: File | string | null;
-  gender?: string;
-  dateOfBirth?: string;
-  role?: string;
-  rating?: number;
   password?: string;
 }
 
