@@ -10,9 +10,9 @@ const Navbar = () => {
   const location = useLocation();
 
   return (
-    <header className="bg-white border-b border-gray-200 py-4 px-6">
+    <header className="glass-nav sticky top-0 z-50 py-4 px-6">
       <div className="container mx-auto flex items-center justify-between">
-        <Link to="/" className="text-2xl font-bold text-brand-blue">
+        <Link to="/" className="text-2xl font-bold text-blue-500">
           BeWithMe
         </Link>
 
@@ -68,7 +68,7 @@ const Navbar = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative text-gray-600 hover:text-brand-blue"
+                className="relative text-gray-600 hover:text-blue-500"
               >
                 <Bell className="h-5 w-5" />
                 <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
@@ -90,7 +90,7 @@ const Navbar = () => {
               
               <Button
                 variant="ghost"
-                className="text-gray-700 hover:text-brand-blue-dark"
+                className="text-gray-700 hover:text-blue-500"
                 onClick={logout}
               >
                 Logout

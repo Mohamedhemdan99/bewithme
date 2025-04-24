@@ -164,4 +164,51 @@ export const authService = {
       throw error;
     }
   },
+
+  // Request password reset
+  async requestPasswordReset(email: string) {
+    try {
+      await api.post('/ForgotPassword', { email });
+      return true;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message || 'Failed to request password reset';
+        toast.error(message);
+      }
+      throw error;
+    }
+  },
+
+  // Verify reset code
+  async verifyResetCode(email: string, code: string) {
+    try {
+      await api.post('/VerifyResetCode', { email, code });
+      return true;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message || 'Invalid verification code';
+        toast.error(message);
+      }
+      throw error;
+    }
+  },
+
+  // Reset password
+  async resetPassword(email: string, code: string, newPassword: string, confirmPassword: string) {
+    try {
+      await api.post('/ResetPassword', { 
+        email, 
+        code, 
+        newPassword, 
+        confirmPassword 
+      });
+      return true;
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message || 'Password reset failed';
+        toast.error(message);
+      }
+      throw error;
+    }
+  }
 };

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserProfile, EditableUserProfile } from '../services/authService';
+import { EditableUserProfile } from '../services/authService';
+import { profileService, ProfileData } from '../services/profileService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +21,24 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(user?.picture || null);
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        const data = await profileService.getProfileData();
+        setProfileData(data);
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
 
   if (!user) {
     return (
@@ -72,21 +92,30 @@ const Profile = () => {
     }
   };
 
+  // Display the fetched profile data or fall back to user data
+  const displayName = profileData ? profileData.fullName : `${user.firstName} ${user.lastName}`;
+  const displayEmail = profileData ? profileData.email : user.email;
+  const displayGender = profileData ? profileData.gender : user.gender;
+  const displayDateOfBirth = profileData ? profileData.dateOfBirth : user.dateOfBirth;
+  const displayRating = profileData ? profileData.rate : 0;
+  const displayPicture = profileData && profileData.profileImageUrl ? 
+    profileData.profileImageUrl : (user.picture || null);
+
   return (
     <div className="app-container min-h-screen bg-gray-50">
       <div className="container mx-auto max-w-4xl px-4 py-10">
         <Card className="overflow-hidden">
           {/* Profile Header/Cover */}
-          <div className="bg-gradient-to-r from-brand-blue to-brand-blue-dark h-40 w-full relative"></div>
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-40 w-full relative"></div>
           
           <div className="px-6 sm:px-8 relative">
             {/* Profile Picture */}
             <div className="relative -mt-16 mb-4">
               <div className={`h-32 w-32 rounded-full border-4 border-white bg-white ${isEditing ? 'cursor-pointer' : ''}`}>
-                {imagePreview ? (
+                {imagePreview || displayPicture ? (
                   <img
-                    src={imagePreview}
-                    alt={`${user.firstName} ${user.lastName}`}
+                    src={imagePreview || displayPicture}
+                    alt={displayName}
                     className="h-full w-full object-cover rounded-full"
                   />
                 ) : (
@@ -116,7 +145,7 @@ const Profile = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-2xl">
-                        {user.firstName} {user.lastName}
+                        {displayName}
                       </CardTitle>
                       <CardDescription className="text-gray-500">
                         @{user.username}
@@ -162,37 +191,46 @@ const Profile = () => {
                     <div>
                       <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="firstName">First Name</Label>
-                          {isEditing ? (
-                            <Input
-                              id="firstName"
-                              name="firstName"
-                              value={editableUser.firstName || ''}
-                              onChange={handleInputChange}
-                            />
-                          ) : (
-                            <p className="mt-1 font-medium">{user.firstName}</p>
-                          )}
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="lastName">Last Name</Label>
-                          {isEditing ? (
-                            <Input
-                              id="lastName"
-                              name="lastName"
-                              value={editableUser.lastName || ''}
-                              onChange={handleInputChange}
-                            />
-                          ) : (
-                            <p className="mt-1 font-medium">{user.lastName}</p>
-                          )}
-                        </div>
+                        {profileData ? (
+                          <div>
+                            <Label>Full Name</Label>
+                            <p className="mt-1 font-medium">{profileData.fullName}</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div>
+                              <Label htmlFor="firstName">First Name</Label>
+                              {isEditing ? (
+                                <Input
+                                  id="firstName"
+                                  name="firstName"
+                                  value={editableUser.firstName || ''}
+                                  onChange={handleInputChange}
+                                />
+                              ) : (
+                                <p className="mt-1 font-medium">{user.firstName}</p>
+                              )}
+                            </div>
+                            
+                            <div>
+                              <Label htmlFor="lastName">Last Name</Label>
+                              {isEditing ? (
+                                <Input
+                                  id="lastName"
+                                  name="lastName"
+                                  value={editableUser.lastName || ''}
+                                  onChange={handleInputChange}
+                                />
+                              ) : (
+                                <p className="mt-1 font-medium">{user.lastName}</p>
+                              )}
+                            </div>
+                          </>
+                        )}
                         
                         <div>
                           <Label htmlFor="email">Email</Label>
-                          <p className="mt-1 font-medium">{user.email}</p>
+                          <p className="mt-1 font-medium">{displayEmail}</p>
                         </div>
                         
                         <div>
@@ -202,7 +240,7 @@ const Profile = () => {
                         
                         <div>
                           <Label htmlFor="gender">Gender</Label>
-                          <p className="mt-1 font-medium">{user.gender}</p>
+                          <p className="mt-1 font-medium">{displayGender}</p>
                         </div>
                         
                         <div>
@@ -211,9 +249,16 @@ const Profile = () => {
                             Date of Birth
                           </Label>
                           <p className="mt-1 font-medium">
-                            {user.dateOfBirth ? format(new Date(user.dateOfBirth), 'PPP') : 'Not provided'}
+                            {displayDateOfBirth ? format(new Date(displayDateOfBirth), 'PPP') : 'Not provided'}
                           </p>
                         </div>
+
+                        {profileData && (
+                          <div>
+                            <Label>Language Preference</Label>
+                            <p className="mt-1 font-medium capitalize">{profileData.languagePreference}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                     
@@ -279,7 +324,7 @@ const Profile = () => {
                           {[1, 2, 3, 4, 5].map((star) => (
                             <svg
                               key={star}
-                              className={`w-5 h-5 ${star <= 4 ? 'text-yellow-400' : 'text-gray-300'}`}
+                              className={`w-5 h-5 ${star <= displayRating ? 'text-yellow-400' : 'text-gray-300'}`}
                               fill="currentColor"
                               viewBox="0 0 20 20"
                             >
@@ -287,7 +332,7 @@ const Profile = () => {
                             </svg>
                           ))}
                         </div>
-                        <span className="ml-2 font-semibold">4.0/5</span>
+                        <span className="ml-2 font-semibold">{displayRating}/5</span>
                       </div>
                     </div>
                     

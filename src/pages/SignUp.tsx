@@ -29,14 +29,28 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // Date of birth fields
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({...prev, [name]: ''}));
+    }
   };
   
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user makes a selection
+    if (errors[name]) {
+      setErrors(prev => ({...prev, [name]: ''}));
+    }
   };
   
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,18 +67,58 @@ const SignUp = () => {
     }
   };
   
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.firstName) {
+      newErrors.firstName = 'First name is required';
+    }
+    
+    if (!formData.lastName) {
+      newErrors.lastName = 'Last name is required';
+    }
+    
+    if (!formData.username) {
+      newErrors.username = 'Username is required';
+    }
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    if (!formData.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+    
+    if (!day || !month || !year) {
+      newErrors.dateOfBirth = 'Date of birth is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
+    // Combine day, month, year into dateOfBirth string
+    if (day && month && year) {
+      const dateOfBirth = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      setFormData(prev => ({ ...prev, dateOfBirth }));
+      formData.dateOfBirth = dateOfBirth;
     }
-
-    if (!formData.firstName || !formData.lastName || !formData.username || !formData.email || 
-        !formData.password || !formData.gender || !formData.dateOfBirth) {
-      toast.error('Please fill in all required fields');
+    
+    if (!validateForm()) {
       return;
     }
 
@@ -87,7 +141,7 @@ const SignUp = () => {
             
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="flex justify-center mb-6">
-                <div className="relative w-32 h-32 rounded-full bg-gray-100 overflow-hidden border-2 border-brand-blue">
+                <div className="relative w-32 h-32 rounded-full bg-gray-100 overflow-hidden border-2 border-blue-500">
                   {imagePreview ? (
                     <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
@@ -118,8 +172,11 @@ const SignUp = () => {
                     value={formData.firstName}
                     onChange={handleInputChange}
                     placeholder="First Name"
-                    required
+                    className={errors.firstName ? "border-red-500" : ""}
                   />
+                  {errors.firstName && (
+                    <p className="input-error">{errors.firstName}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -130,8 +187,11 @@ const SignUp = () => {
                     value={formData.lastName}
                     onChange={handleInputChange}
                     placeholder="Last Name"
-                    required
+                    className={errors.lastName ? "border-red-500" : ""}
                   />
+                  {errors.lastName && (
+                    <p className="input-error">{errors.lastName}</p>
+                  )}
                 </div>
               </div>
 
@@ -143,8 +203,11 @@ const SignUp = () => {
                   value={formData.username}
                   onChange={handleInputChange}
                   placeholder="Username"
-                  required
+                  className={errors.username ? "border-red-500" : ""}
                 />
+                {errors.username && (
+                  <p className="input-error">{errors.username}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -156,8 +219,11 @@ const SignUp = () => {
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="your@email.com"
-                  required
+                  className={errors.email ? "border-red-500" : ""}
                 />
+                {errors.email && (
+                  <p className="input-error">{errors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -170,7 +236,7 @@ const SignUp = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="Create a secure password"
-                    required
+                    className={errors.password ? "border-red-500" : ""}
                   />
                   <button
                     type="button"
@@ -180,6 +246,9 @@ const SignUp = () => {
                     {showPassword ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="input-error">{errors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -192,7 +261,7 @@ const SignUp = () => {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     placeholder="Confirm your password"
-                    required
+                    className={errors.confirmPassword ? "border-red-500" : ""}
                   />
                   <button
                     type="button"
@@ -202,6 +271,9 @@ const SignUp = () => {
                     {showConfirmPassword ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
                   </button>
                 </div>
+                {errors.confirmPassword && (
+                  <p className="input-error">{errors.confirmPassword}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -210,9 +282,8 @@ const SignUp = () => {
                   <Select
                     name="gender"
                     onValueChange={(value) => handleSelectChange('gender', value)}
-                    required
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={errors.gender ? "border-red-500" : ""}>
                       <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
@@ -221,21 +292,69 @@ const SignUp = () => {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.gender && (
+                    <p className="input-error">{errors.gender}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth" className="flex items-center">
+                  <Label className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2" />
                     Date of Birth
                   </Label>
-                  <Input
-                    id="dateOfBirth"
-                    name="dateOfBirth"
-                    type="date"
-                    value={formData.dateOfBirth}
-                    onChange={handleInputChange}
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="day"
+                      placeholder="DD"
+                      maxLength={2}
+                      value={day}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value === '' || (parseInt(value) > 0 && parseInt(value) <= 31)) {
+                          setDay(value);
+                          if (errors.dateOfBirth) {
+                            setErrors(prev => ({...prev, dateOfBirth: ''}));
+                          }
+                        }
+                      }}
+                      className={errors.dateOfBirth ? "border-red-500" : ""}
+                    />
+                    <Input
+                      id="month"
+                      placeholder="MM"
+                      maxLength={2}
+                      value={month}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value === '' || (parseInt(value) > 0 && parseInt(value) <= 12)) {
+                          setMonth(value);
+                          if (errors.dateOfBirth) {
+                            setErrors(prev => ({...prev, dateOfBirth: ''}));
+                          }
+                        }
+                      }}
+                      className={errors.dateOfBirth ? "border-red-500" : ""}
+                    />
+                    <Input
+                      id="year"
+                      placeholder="YYYY"
+                      maxLength={4}
+                      value={year}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        if (value === '' || (parseInt(value) >= 1900 && parseInt(value) <= new Date().getFullYear())) {
+                          setYear(value);
+                          if (errors.dateOfBirth) {
+                            setErrors(prev => ({...prev, dateOfBirth: ''}));
+                          }
+                        }
+                      }}
+                      className={errors.dateOfBirth ? "border-red-500" : ""}
+                    />
+                  </div>
+                  {errors.dateOfBirth && (
+                    <p className="input-error">{errors.dateOfBirth}</p>
+                  )}
                 </div>
               </div>
 
@@ -257,7 +376,7 @@ const SignUp = () => {
             <div className="mt-6 text-center">
               <p className="text-gray-600">
                 Already have an account?{' '}
-                <Link to="/login" className="text-brand-blue hover:underline font-medium">
+                <Link to="/login" className="text-blue-500 hover:underline font-medium">
                   Log in
                 </Link>
               </p>

@@ -16,6 +16,7 @@ interface Post {
   content: string;
   timestamp: string;
   isAccepted?: boolean;
+  acceptCount?: number;
 }
 
 const mockPosts: Post[] = [
@@ -25,7 +26,8 @@ const mockPosts: Post[] = [
     authorUsername: 'saraj',
     authorAvatar: '/lovable-uploads/19820934-c2d1-4a88-babe-dae50caea634.png',
     content: 'Just finished a great session helping someone with their math homework. It feels great to make a difference!',
-    timestamp: '2h ago'
+    timestamp: '2h ago',
+    acceptCount: 15
   },
   {
     id: '2',
@@ -33,7 +35,8 @@ const mockPosts: Post[] = [
     authorUsername: 'salmaa',
     authorAvatar: '/lovable-uploads/171d612a-355f-435f-8dca-624701830287.png',
     content: 'Looking for someone to help me with my Spanish practice. Anyone available for a quick chat session?',
-    timestamp: '5h ago'
+    timestamp: '5h ago',
+    acceptCount: 3
   },
   {
     id: '3',
@@ -41,38 +44,22 @@ const mockPosts: Post[] = [
     authorUsername: 'ahmedh',
     authorAvatar: '/lovable-uploads/01744b49-bc3d-47a4-b4ff-49ee164b9ba7.png',
     content: "I've been using this platform for a month now and I've made so much progress with my studies. Highly recommend connecting with mentors here!",
-    timestamp: '1d ago'
+    timestamp: '1d ago',
+    acceptCount: 27
   }
 ];
 
 const Home = () => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>(mockPosts);
-  const [newPostContent, setNewPostContent] = useState('');
-
-  const handleCreatePost = () => {
-    if (!newPostContent.trim()) {
-      toast.error('Please write something before posting');
-      return;
-    }
-
-    const newPost: Post = {
-      id: Date.now().toString(),
-      authorName: `${user?.firstName} ${user?.lastName}`,
-      authorUsername: user?.username || '',
-      authorAvatar: user?.picture || '',
-      content: newPostContent,
-      timestamp: 'Just now'
-    };
-
-    setPosts([newPost, ...posts]);
-    setNewPostContent('');
-    toast.success('Post created successfully!');
-  };
 
   const handleAcceptPost = (postId: string) => {
     setPosts(posts.map(post => 
-      post.id === postId ? { ...post, isAccepted: true } : post
+      post.id === postId ? { 
+        ...post, 
+        isAccepted: true,
+        acceptCount: (post.acceptCount || 0) + 1
+      } : post
     ));
     toast.success('Post accepted');
   };
@@ -85,41 +72,10 @@ const Home = () => {
   return (
     <div className="app-container bg-gray-50 min-h-screen pb-20">
       <div className="container mx-auto max-w-4xl px-4 py-8">
-        {/* Create Post */}
-        <Card className="mb-8 p-6 shadow-sm">
-          <div className="flex space-x-4">
-            <Avatar className="h-12 w-12">
-              {user?.picture ? (
-                <AvatarImage src={user.picture} alt={user.username} />
-              ) : (
-                <AvatarFallback>
-                  <User className="h-6 w-6" />
-                </AvatarFallback>
-              )}
-            </Avatar>
-            <div className="flex-1">
-              <textarea
-                className="w-full border rounded-lg p-4 min-h-[100px] focus:outline-none focus:ring-2 focus:ring-brand-blue"
-                placeholder="What's on your mind?"
-                value={newPostContent}
-                onChange={(e) => setNewPostContent(e.target.value)}
-              ></textarea>
-              <div className="mt-4 flex justify-end">
-                <Button
-                  className="btn-primary"
-                  onClick={handleCreatePost}
-                >
-                  Create Post
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-
         {/* Feed */}
         <div className="space-y-6">
           {posts.map((post) => (
-            <Card key={post.id} className={`p-6 shadow-sm ${post.authorUsername === 'salmaa' ? 'border-brand-blue border-2' : ''}`}>
+            <Card key={post.id} className={`p-6 shadow-sm ${post.authorUsername === 'salmaa' ? 'border-blue-500 border-2' : ''}`}>
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
@@ -134,7 +90,7 @@ const Home = () => {
                   </div>
                 </div>
                 {post.authorUsername !== user?.username && (
-                  <Button variant="ghost" size="icon" className="text-gray-500 hover:text-brand-blue">
+                  <Button variant="ghost" size="icon" className="text-gray-500 hover:text-blue-500">
                     <Bell className="h-5 w-5" />
                   </Button>
                 )}
@@ -144,29 +100,36 @@ const Home = () => {
                 <p className="text-gray-800">{post.content}</p>
               </div>
               
-              {post.authorUsername !== user?.username && !post.isAccepted && (
-                <div className="flex gap-4 justify-end">
-                  <Button 
-                    className="btn-primary"
-                    onClick={() => handleAcceptPost(post.id)}
-                  >
-                    Accept
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    className="btn-outline"
-                    onClick={() => handleIgnorePost(post.id)}
-                  >
-                    Ignore
-                  </Button>
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-500 flex items-center">
+                  <span className="font-medium text-blue-500">{post.acceptCount || 0}</span>
+                  <span className="ml-1">Acceptances</span>
                 </div>
-              )}
-              
-              {post.isAccepted && (
-                <div className="mt-2 text-right">
-                  <span className="text-green-600 font-medium">Accepted</span>
-                </div>
-              )}
+                
+                {post.authorUsername !== user?.username && !post.isAccepted && (
+                  <div className="flex gap-4">
+                    <Button 
+                      className="btn-primary"
+                      onClick={() => handleAcceptPost(post.id)}
+                    >
+                      Accept
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      className="btn-outline"
+                      onClick={() => handleIgnorePost(post.id)}
+                    >
+                      Ignore
+                    </Button>
+                  </div>
+                )}
+                
+                {post.isAccepted && (
+                  <div>
+                    <span className="text-green-600 font-medium">Accepted</span>
+                  </div>
+                )}
+              </div>
             </Card>
           ))}
         </div>

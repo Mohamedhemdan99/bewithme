@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import ForgotPasswordModal from '../components/ForgotPasswordModal';
 
 const initialFormData: LoginFormData = {
   usernameOrEmail: '',
@@ -20,22 +21,41 @@ const Login = () => {
   const { login, isLoading } = useAuth();
   const [formData, setFormData] = useState<LoginFormData>(initialFormData);
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({...prev, [name]: ''}));
+    }
   };
   
   const handleCheckboxChange = (checked: boolean) => {
     setFormData((prev) => ({ ...prev, rememberMe: checked }));
   };
   
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!formData.usernameOrEmail) {
+      newErrors.usernameOrEmail = 'Username or email is required';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation
-    if (!formData.usernameOrEmail || !formData.password) {
-      toast.error('Please enter both username/email and password');
+    if (!validateForm()) {
       return;
     }
 
@@ -65,16 +85,23 @@ const Login = () => {
                   value={formData.usernameOrEmail}
                   onChange={handleInputChange}
                   placeholder="Enter your email or username"
-                  required
+                  className={errors.usernameOrEmail ? "border-red-500" : ""}
                 />
+                {errors.usernameOrEmail && (
+                  <p className="input-error">{errors.usernameOrEmail}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="password">Password</Label>
-                  <Link to="/forgot-password" className="text-sm font-medium text-brand-blue hover:underline">
+                  <button 
+                    type="button"
+                    onClick={() => setForgotPasswordOpen(true)}
+                    className="text-sm font-medium text-blue-500 hover:underline"
+                  >
                     Forgot password?
-                  </Link>
+                  </button>
                 </div>
                 <div className="relative">
                   <Input
@@ -84,7 +111,7 @@ const Login = () => {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="Enter your password"
-                    required
+                    className={errors.password ? "border-red-500" : ""}
                   />
                   <button
                     type="button"
@@ -94,6 +121,9 @@ const Login = () => {
                     {showPassword ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="input-error">{errors.password}</p>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
@@ -129,7 +159,7 @@ const Login = () => {
                       fill="#4285F4"
                     />
                     <path
-                      d="M12.956 16.26c-1.553 0-2.884-.926-3.55-2.237l-2.919 1.208c1.268 2.693 3.964 4.548 6.469 4.548 1.743 0 3.397-.561 4.80-1.619l-2.532-1.963c-.874.58-1.879.896-2.893.896"
+                      d="M12.956 16.26c-1.553 0-2.884-.926-3.55-2.237l-2.919 1.208c1.268 2.693 3.964 4.548 6.469 4.548 1.743 0 3.397-.561 4.8-1.619l-2.532-1.963c-.874.58-1.879.896-2.893.896"
                       fill="#34A853"
                     />
                     <path
@@ -163,7 +193,7 @@ const Login = () => {
             <div className="mt-6 text-center">
               <p className="text-gray-600">
                 Don't have an account?{' '}
-                <Link to="/signup" className="text-brand-blue hover:underline font-medium">
+                <Link to="/signup" className="text-blue-500 hover:underline font-medium">
                   Sign up
                 </Link>
               </p>
@@ -171,6 +201,11 @@ const Login = () => {
           </div>
         </div>
       </section>
+
+      <ForgotPasswordModal
+        isOpen={forgotPasswordOpen}
+        onClose={() => setForgotPasswordOpen(false)}
+      />
     </div>
   );
 };
