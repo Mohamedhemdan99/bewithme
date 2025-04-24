@@ -40,7 +40,7 @@ const mockPosts: Post[] = [
     authorName: 'Ahmed Hassan',
     authorUsername: 'ahmedh',
     authorAvatar: '/lovable-uploads/01744b49-bc3d-47a4-b4ff-49ee164b9ba7.png',
-    content: 'I've been using this platform for a month now and I've made so much progress with my studies. Highly recommend connecting with mentors here!',
+    content: "I've been using this platform for a month now and I've made so much progress with my studies. Highly recommend connecting with mentors here!",
     timestamp: '1d ago'
   }
 ];
