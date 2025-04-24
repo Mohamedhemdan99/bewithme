@@ -11,10 +11,15 @@ import { Eye, EyeOff, Edit, User, Calendar, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
+interface EditableUserProfile extends Partial<UserProfile> {
+  picture?: File | string | null;
+  password?: string;
+}
+
 const Profile = () => {
   const { user, logout, updateProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [editableUser, setEditableUser] = useState<Partial<UserProfile>>(user || {});
+  const [editableUser, setEditableUser] = useState<EditableUserProfile>(user || {});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -55,7 +60,7 @@ const Profile = () => {
     }
 
     try {
-      const dataToUpdate: Partial<UserProfile> = { ...editableUser };
+      const dataToUpdate: EditableUserProfile = { ...editableUser };
       
       // Only include password if it's been changed
       if (newPassword) {

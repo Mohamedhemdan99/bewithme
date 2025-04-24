@@ -115,8 +115,15 @@ export const authService = {
 
   // Get current user data
   getCurrentUser(): UserProfile | null {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    const userDataString = localStorage.getItem('user');
+    if (!userDataString) return null;
+    
+    try {
+      return JSON.parse(userDataString);
+    } catch (error) {
+      console.error('Error parsing user data from localStorage:', error);
+      return null;
+    }
   },
 
   // Update user profile
