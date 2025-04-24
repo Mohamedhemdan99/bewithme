@@ -37,6 +37,12 @@ export interface UserProfile {
   rating: number;
 }
 
+// For profile updates with optional file uploads
+export interface EditableUserProfile extends Partial<Omit<UserProfile, 'picture'>> {
+  picture?: File | string | null;
+  password?: string;
+}
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -127,7 +133,7 @@ export const authService = {
   },
 
   // Update user profile
-  async updateProfile(userData: Partial<UserProfile> & { picture?: File | string | null; password?: string }) {
+  async updateProfile(userData: EditableUserProfile) {
     try {
       const data = new FormData();
       

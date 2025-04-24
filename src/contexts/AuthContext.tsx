@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { authService, UserProfile, LoginFormData, SignUpFormData } from '../services/authService';
+import { authService, UserProfile, LoginFormData, SignUpFormData, EditableUserProfile } from '../services/authService';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -11,7 +11,7 @@ interface AuthContextType {
   login: (data: LoginFormData) => Promise<void>;
   register: (data: SignUpFormData) => Promise<void>;
   logout: () => void;
-  updateProfile: (data: Partial<UserProfile> & { picture?: File | string | null; password?: string }) => Promise<void>;
+  updateProfile: (data: EditableUserProfile) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigate('/');
   };
 
-  const updateProfile = async (data: Partial<UserProfile> & { picture?: File | string | null; password?: string }) => {
+  const updateProfile = async (data: EditableUserProfile) => {
     try {
       setIsLoading(true);
       const updatedUser = await authService.updateProfile(data);

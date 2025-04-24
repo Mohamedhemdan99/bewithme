@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { UserProfile } from '../services/authService';
+import { UserProfile, EditableUserProfile } from '../services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,12 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Eye, EyeOff, Edit, User, Calendar, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-
-// Define an interface for the editable user profile that matches what authService.updateProfile expects
-interface EditableUserProfile extends Partial<Omit<UserProfile, 'picture'>> {
-  picture?: File | string | null;
-  password?: string;
-}
 
 const Profile = () => {
   const { user, logout, updateProfile } = useAuth();
