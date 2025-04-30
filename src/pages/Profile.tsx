@@ -1,8 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { EditableUserProfile } from '../services/authService';
-import { profileService, ProfileData } from '../services/profileService';
+import { useAuth } from '../hooks/useAuth';
+import { profileService, ProfileData, EditableUserProfile, ProfileUpdateData } from '../services/profileService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,35 +9,86 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Eye, EyeOff, Edit, User, Calendar, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { SelectValue } from '@/components/ui/select copy';
 
 const Profile = () => {
-  const { user, logout, updateProfile } = useAuth();
+  const { logout, user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [editableUser, setEditableUser] = useState<EditableUserProfile>(user || {});
+  const [editableUser, setEditableUser] = useState<EditableUserProfile>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(user?.picture || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState<ProfileUpdateData>({
+    fullName: '',
+    gender: '',
+    dateOfBirth: '',
+    languagePreference: '',
+    profileImage: null,
+    password: '',
+    confirmPassword: ''
+  });
 
+  // const serverURL = "https://localhost:1190/";
+  const serverURL = "https://bewtihme-001-site1.jtempurl.com/";
+
+  // Fetch profile data from the backend
   useEffect(() => {
-    const fetchProfileData = async () => {
+    let isMounted = true;
+console.log(user);
+    const initializeUserData = async () => {
       try {
         setLoading(true);
-        const data = await profileService.getProfileData();
-        setProfileData(data);
+        const [profileData, currentUser] = await Promise.all([
+          profileService.getProfileData(),
+          profileService.getCurrentUser()
+        ]);
+        console.log('Fetched profile data:', profileData);
+        console.log('Current user:', currentUser);
+        if (isMounted) {
+          setProfileData(profileData);
+          // Initialize image preview from profile data
+          if (profileData?.profileImageUrl) {
+            setImagePreview(profileData.profileImageUrl);
+          }
+        }
       } catch (error) {
-        console.error('Error fetching profile data:', error);
+        console.error('Error initializing user data:', error);
+        if (isMounted) {
+          toast.error('Failed to load user data');
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchProfileData();
-  }, []);
+    if (user) {
+      initializeUserData();
+    } else {
+      setLoading(false);
+    }
 
+    return () => {
+      isMounted = false;
+    };
+  }, [user]); // Add user as a dependency
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
+
+  // Return early if user is not authenticated
   if (!user) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -47,18 +96,25 @@ const Profile = () => {
       </div>
     );
   }
+  
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setEditableUser(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
+  // // Handle input changes for editable fields
+  // const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const { name, value } = e.target;
+  //   setEditableUser((prev) => ({ ...prev, [name]: value }));
+  // };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setEditableUser(prev => ({ ...prev, picture: file }));
+      setFormData(prev => ({ ...prev, profileImage: file }));
       
-      // Create a preview
+      // Create preview if needed
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -66,313 +122,332 @@ const Profile = () => {
       reader.readAsDataURL(file);
     }
   };
+  // Handle image upload
+  // const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files && e.target.files[0]) {
+  //     const file = e.target.files[0];
+  //     setEditableUser((prev) => ({ ...prev, profileImageUrl: file }));
 
-  const handleSave = async () => {
-    if (newPassword && newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-
-    try {
-      const dataToUpdate: EditableUserProfile = { ...editableUser };
-      
-      // Only include password if it's been changed
-      if (newPassword) {
-        dataToUpdate.password = newPassword;
+  //     // Create a temporary preview of the uploaded image
+  //     const reader = new FileReader();
+  //     reader.onloadend = () => {
+  //       // Show preview while in edit mode
+  //       setImagePreview(reader.result as string);
+  //     };
+  //     reader.readAsDataURL(file);
+  //   }
+  // };
+// Handle form submission
+const handleSaveProfile = async () => {
+  if (formData.password && formData.password !== formData.confirmPassword) {
+        toast.error('Passwords do not match', { icon: '❌',position:'bottom-center' });
+        return;
       }
-      
-      await updateProfile(dataToUpdate);
-      setIsEditing(false);
-      setNewPassword('');
-      setConfirmPassword('');
-      toast.success('Profile updated successfully');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
-    }
-  };
+  try {
+    // Show loading indicator
+    toast.loading('Updating profile...');
+    
+    // Call the service function with the form data
+    await profileService.updateUserProfile(formData);
+    
+    // Refresh profile data after update
+    const refreshedData = await profileService.getProfileData();
+    setProfileData(refreshedData);
+    
+    // Update local storage and dispatch event to notify navbar
+    localStorage.setItem('user', JSON.stringify(refreshedData));
+    window.dispatchEvent(new Event('userProfileUpdated'));
+    
+    // Reset form state
+    setIsEditing(false);
+    setImagePreview(null);
+    
+    
+    // Show success message
+    toast.dismiss();
+    toast.success('Profile updated successfully', { icon: '✅' });
+  } catch (error) {
+    toast.dismiss();
+    // console.error('Error updating profile:', error);
+    toast.error('Failed to update profile', { icon: '❌' });
+  }
+};
+  // Handle saving updated profile data
+  // const handleSave = async () => {
+  //   if (newPassword && newPassword !== confirmPassword) {
+  //     toast.error('Passwords do not match');
+  //     return;
+  //   }
 
-  // Display the fetched profile data or fall back to user data
-  const displayName = profileData ? profileData.fullName : `${user.firstName} ${user.lastName}`;
-  const displayEmail = profileData ? profileData.email : user.email;
-  const displayGender = profileData ? profileData.gender : user.gender;
-  const displayDateOfBirth = profileData ? profileData.dateOfBirth : user.dateOfBirth;
-  const displayRating = profileData ? profileData.rate : 0;
-  const displayPicture = profileData && profileData.profileImageUrl ? 
-    profileData.profileImageUrl : (user.picture || null);
+  //   try {
+  //     const dataToUpdate: EditableUserProfile = { ...editableUser };
+  //     if (newPassword) {
+  //       dataToUpdate.password = newPassword;
+  //     }
+
+  //     const updatedProfile = await profileService.updateProfile(dataToUpdate);
+  //     const refreshedData = await profileService.getProfileData();
+  //     setProfileData(refreshedData);
+      
+  //     // Clear the temporary base64 preview and use the actual URL from server
+  //     setImagePreview(null); // Clear the temporary preview
+  //     if (refreshedData?.profileImageUrl) {
+  //       // Use the actual URL from the server
+  //       setImagePreview(refreshedData.profileImageUrl);
+  //     }
+
+  //     setIsEditing(false);
+  //     setNewPassword('');
+  //     setConfirmPassword('');
+  //     toast.success('Profile updated successfully', { icon: '✅' });
+  //   } catch (error) {
+  //     console.error('Error updating profile:', error);
+  //     toast.error('Failed to update profile');
+  //   }
+  // };
+
+  // Fallback to user data if profileData is not available
+  const displayName = profileData?.fullName || user?.fullName || '';
+  const displayEmail = profileData?.email || user?.email || '';
+  const displayGender = profileData?.gender || user?.gender || '';
+  const displayDateOfBirth = profileData?.dateOfBirth || user?.dateOfBirth || '';
+  const displayRating = profileData?.rate || 0;
+  const displayPicture = profileData?.profileImageUrl || user?.profileImageUrl || '';
+console.log('Display Picture:', displayPicture);
+console.log('Image Preview:', imagePreview);
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Loading profile...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="app-container min-h-screen bg-gray-50">
+    <div className="app-container min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <div className="container mx-auto max-w-4xl px-4 py-10">
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden shadow-xl rounded-xl">
           {/* Profile Header/Cover */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-40 w-full relative"></div>
-          
+          <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 h-48 w-full relative">
+            <div className="absolute inset-0 bg-black opacity-10"></div>
+          </div>
           <div className="px-6 sm:px-8 relative">
             {/* Profile Picture */}
-            <div className="relative -mt-16 mb-4">
-              <div className={`h-32 w-32 rounded-full border-4 border-white bg-white ${isEditing ? 'cursor-pointer' : ''}`}>
-                {imagePreview || displayPicture ? (
-                  <img
-                    src={imagePreview || displayPicture}
-                    alt={displayName}
-                    className="h-full w-full object-cover rounded-full"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center bg-gray-100 rounded-full">
-                    <User className="h-16 w-16 text-gray-400" />
-                  </div>
-                )}
-                
+            <div className="relative -mt-20 mb-6">
+              <div className="relative inline-block">
+                <Avatar className="h-40 w-40 border-4 border-white shadow-2xl ring-4 ring-blue-50">
+                  <AvatarImage src={imagePreview && imagePreview.startsWith('data:image/jpeg;base64') ? imagePreview : serverURL+displayPicture} alt={displayName} className="object-cover" />
+                  <AvatarFallback>
+                    <User className="h-20 w-20 text-gray-400" />
+                  </AvatarFallback>
+                </Avatar>
                 {isEditing && (
-                  <label className="absolute inset-0 rounded-full cursor-pointer bg-black bg-opacity-40 flex items-center justify-center opacity-0 hover:opacity-100 transition">
-                    <Edit className="h-8 w-8 text-white" />
+                  <label className="absolute bottom-2 right-2 bg-blue-600 text-white p-3 rounded-full cursor-pointer hover:bg-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                    <Edit className="h-5 w-5" />
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      onChange={handleImageChange}
+                      onChange={handleFileChange}
                     />
                   </label>
                 )}
               </div>
             </div>
-            
-            <div className="flex flex-col lg:flex-row">
-              <div className="lg:w-2/3">
-                {/* Profile Info */}
-                <CardHeader className="px-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-2xl">
-                        {displayName}
-                      </CardTitle>
-                      <CardDescription className="text-gray-500">
-                        @{user.username}
-                      </CardDescription>
+            <div className="flex flex-col">
+              <CardHeader className="px-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="space-y-2">
+                    <CardTitle className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">
+                      {displayName}
+                    </CardTitle>
+                    <CardDescription className="text-gray-600 text-lg">@{user?.userName || 'N/A'}</CardDescription>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">
+                        <Calendar className="h-4 w-4 mr-1" />
+                        Joined {format(new Date(), 'MMMM yyyy')}
+                      </span>
+                      {displayRating > 0 && (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 font-medium">
+                          ★ {displayRating.toFixed(1)} Rating
+                        </span>
+                      )}
                     </div>
-                    {!isEditing ? (
-                      <Button
-                        onClick={() => setIsEditing(true)}
-                        variant="outline"
-                        className="flex items-center gap-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        Edit Profile
-                      </Button>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditing(false);
-                            setEditableUser(user);
-                            setImagePreview(user.picture || null);
-                            setNewPassword('');
-                            setConfirmPassword('');
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          className="btn-primary"
-                          onClick={handleSave}
-                        >
-                          Save Changes
-                        </Button>
-                      </div>
-                    )}
                   </div>
-                </CardHeader>
-                
-                <CardContent className="px-0 py-6">
-                  <div className="space-y-6">
-                    {/* Personal Information */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {profileData ? (
-                          <div>
-                            <Label>Full Name</Label>
-                            <p className="mt-1 font-medium">{profileData.fullName}</p>
-                          </div>
+                  {!isEditing ? (
+                    <Button
+                      onClick={() => setIsEditing(true)}
+                      variant="outline"
+                      className="flex items-center gap-2 border-2 border-blue-600 text-blue-600 hover:bg-blue-50 transition-all duration-200 px-6 py-2 rounded-full"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                  ) : (
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditing(false);
+                          setEditableUser({});
+                          setImagePreview(null);
+                          setNewPassword('');
+                          setConfirmPassword('');
+                        }}
+                        className="text-gray-600 hover:bg-gray-50 transition-all duration-200 px-6 py-2 rounded-full"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveProfile}
+                        className="bg-blue-600 hover:bg-blue-700 text-white transition-all duration-200 px-6 py-2 rounded-full shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        Save Changes
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="px-0 py-6">
+                <div className="space-y-8">
+                  {/* Personal Information */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-6">Personal Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-semibold text-gray-700">Full Name</Label>
+                        {isEditing ? (
+                          <Input
+                            name="fullName"
+                            value={formData.fullName || ''}
+                            onChange={handleInputChange}
+                            className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                            placeholder="Enter your full name"
+                          />
                         ) : (
-                          <>
-                            <div>
-                              <Label htmlFor="firstName">First Name</Label>
-                              {isEditing ? (
-                                <Input
-                                  id="firstName"
-                                  name="firstName"
-                                  value={editableUser.firstName || ''}
-                                  onChange={handleInputChange}
-                                />
-                              ) : (
-                                <p className="mt-1 font-medium">{user.firstName}</p>
-                              )}
-                            </div>
-                            
-                            <div>
-                              <Label htmlFor="lastName">Last Name</Label>
-                              {isEditing ? (
-                                <Input
-                                  id="lastName"
-                                  name="lastName"
-                                  value={editableUser.lastName || ''}
-                                  onChange={handleInputChange}
-                                />
-                              ) : (
-                                <p className="mt-1 font-medium">{user.lastName}</p>
-                              )}
-                            </div>
-                          </>
+                          <p className="text-lg font-medium text-gray-900">{displayName}</p>
                         )}
-                        
-                        <div>
-                          <Label htmlFor="email">Email</Label>
-                          <p className="mt-1 font-medium">{displayEmail}</p>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="username">Username</Label>
-                          <p className="mt-1 font-medium">@{user.username}</p>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="gender">Gender</Label>
-                          <p className="mt-1 font-medium">{displayGender}</p>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="dateOfBirth" className="flex items-center">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Date of Birth
-                          </Label>
-                          <p className="mt-1 font-medium">
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-md font-semibold text-gray-700">Email</Label>
+                        <p className="text-lg font-medium text-gray-900">{displayEmail}</p>
+                      </div>
+                      {/* <div className="space-y-3">
+                        <Label className="text-sm font-semibold text-gray-700">Username</Label>
+                        <p className="text-lg font-medium text-gray-900">@{user?.userName || 'N/A'}</p>
+                      </div> */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-semibold text-gray-700">Gender</Label>
+                        {isEditing ? (
+                          <Select
+                            value={formData.gender}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
+                          >
+                            <SelectTrigger className="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+                              <SelectValue placeholder="Select your gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male" className="py-2 px-4 hover:bg-blue-50">Male</SelectItem>
+                              <SelectItem value="female" className="py-2 px-4 hover:bg-blue-50">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="text-lg font-medium text-gray-900 capitalize">{displayGender}</p>
+                        )}
+                      </div>
+                      <div className="space-y-3">
+                        <Label className="text-xl font-semibold text-gray-700">Date of Birth</Label>
+                        {isEditing ? (
+                          <Input
+                          type="date"
+                          name="dateOfBirth"
+                          value={formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString().split('T')[0] : ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-lg border-2 border-gray-300 text-gray-900 focus:ring-blue-500"
+                        />
+                        ) : (
+                          <p className="text-lg border-3 border-gray-300 focus:ring-blue-500 font-medium text-gray-900">
                             {displayDateOfBirth ? format(new Date(displayDateOfBirth), 'PPP') : 'Not provided'}
                           </p>
-                        </div>
-
-                        {profileData && (
-                          <div>
-                            <Label>Language Preference</Label>
-                            <p className="mt-1 font-medium capitalize">{profileData.languagePreference}</p>
-                          </div>
                         )}
                       </div>
-                    </div>
-                    
-                    {/* Password Section (only in edit mode) */}
-                    {isEditing && (
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4">Update Password</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="relative">
-                            <Label htmlFor="newPassword">New Password</Label>
-                            <Input
-                              id="newPassword"
-                              type={showPassword ? "text" : "password"}
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              placeholder="Enter new password"
-                            />
-                            <button
-                              type="button"
-                              className="absolute right-3 bottom-3 text-gray-500"
-                              onClick={() => setShowPassword(!showPassword)}
-                            >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
+                      <div className="space-y-2">
+                        <Label className="text-gray-700">Rating</Label>
+                        <div className="flex items-center">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <svg
+                                key={star}
+                                className={`w-5 h-5 ${star <= displayRating ? 'text-yellow-400' : 'text-gray-300'}`}
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                              </svg>
+                            ))}
                           </div>
-                          
-                          <div className="relative">
-                            <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                            <Input
-                              id="confirmPassword"
-                              type={showConfirmPassword ? "text" : "password"}
-                              value={confirmPassword}
-                              onChange={(e) => setConfirmPassword(e.target.value)}
-                              placeholder="Confirm new password"
-                            />
-                            <button
-                              type="button"
-                              className="absolute right-3 bottom-3 text-gray-500"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            >
-                              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
+                          <span className="ml-2 font-semibold">{displayRating}/5</span>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </CardContent>
-              </div>
-              
-              <div className="lg:w-1/3 lg:pl-8 lg:border-l border-gray-200">
-                {/* Stats & Rating */}
-                <CardHeader className="px-0">
-                  <CardTitle className="text-lg">Account Stats</CardTitle>
-                </CardHeader>
-                
-                <CardContent className="px-0 py-4">
-                  <div className="space-y-4">
+                  {/* Password Section (only in edit mode) */}
+                  {isEditing && (
                     <div>
-                      <p className="text-sm text-gray-500">User Rating</p>
-                      <div className="flex items-center mt-1">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <svg
-                              key={star}
-                              className={`w-5 h-5 ${star <= displayRating ? 'text-yellow-400' : 'text-gray-300'}`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
+                      <h3 className="text-lg font-semibold mb-4">Update Password</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <Label htmlFor="newPassword">New Password</Label>
+                          <Input
+                            id="newPassword"
+                            name="password"
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password || ''}
+                            onChange={handleInputChange}
+                            placeholder="Enter new password"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 bottom-3 text-gray-500"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
                         </div>
-                        <span className="ml-2 font-semibold">{displayRating}/5</span>
+                        <div className="relative">
+                          <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                          <Input
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            value={formData.confirmPassword || ''}
+                            onChange={handleInputChange}
+                            placeholder="Confirm new password"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 bottom-3 text-gray-500"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          >
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Posts</p>
-                        <p className="text-xl font-semibold">12</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Connections</p>
-                        <p className="text-xl font-semibold">48</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Helped</p>
-                        <p className="text-xl font-semibold">23</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Account Age</p>
-                        <p className="text-xl font-semibold">2 months</p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <p className="text-sm text-gray-500">Role</p>
-                      <p className="text-base font-semibold capitalize">{user.role}</p>
-                    </div>
-                  </div>
-                </CardContent>
-                
-                <CardFooter className="px-0 pt-4 flex flex-col items-start">
-                  <Button
-                    variant="outline"
-                    className="flex items-center gap-2 text-red-500 hover:text-red-700 hover:bg-red-50 w-full justify-center"
-                    onClick={logout}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </Button>
-                </CardFooter>
-              </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter className="px-0 pt-4 flex justify-end">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={logout}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </CardFooter>
             </div>
           </div>
         </Card>

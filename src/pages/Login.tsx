@@ -1,14 +1,12 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { LoginFormData } from '../services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff } from 'lucide-react';
-import { toast } from 'sonner';
 import ForgotPasswordModal from '../components/ForgotPasswordModal';
 
 const initialFormData: LoginFormData = {
@@ -76,82 +74,84 @@ const Login = () => {
               <p className="text-gray-600 mt-2">Log in to your account</p>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="usernameOrEmail">Email or Username</Label>
-                <Input
-                  id="usernameOrEmail"
-                  name="usernameOrEmail"
-                  value={formData.usernameOrEmail}
-                  onChange={handleInputChange}
-                  placeholder="Enter your email or username"
-                  className={errors.usernameOrEmail ? "border-red-500" : ""}
-                />
-                {errors.usernameOrEmail && (
-                  <p className="input-error">{errors.usernameOrEmail}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <button 
-                    type="button"
-                    onClick={() => setForgotPasswordOpen(true)}
-                    className="text-sm font-medium text-blue-500 hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-                <div className="relative">
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="usernameOrEmail">Email or Username</Label>
                   <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
+                    id="usernameOrEmail"
+                    name="usernameOrEmail"
+                    value={formData.usernameOrEmail}
                     onChange={handleInputChange}
-                    placeholder="Enter your password"
-                    className={errors.password ? "border-red-500" : ""}
+                    placeholder="Enter your email or username"
+                    className={errors.usernameOrEmail ? "border-red-500" : ""}
                   />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
-                  </button>
+                  {errors.usernameOrEmail && (
+                    <p className="input-error">{errors.usernameOrEmail}</p>
+                  )}
                 </div>
-                {errors.password && (
-                  <p className="input-error">{errors.password}</p>
-                )}
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="password">Password</Label>
+                    <button 
+                      type="button"
+                      onClick={() => setForgotPasswordOpen(true)}
+                      className="text-sm font-medium text-blue-500 hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Enter your password"
+                      className={errors.password ? "border-red-500" : ""}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5 text-gray-500" /> : <Eye className="h-5 w-5 text-gray-500" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="input-error">{errors.password}</p>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={formData.rememberMe}
+                    onCheckedChange={handleCheckboxChange}
+                  />
+                  <Label htmlFor="rememberMe" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Remember me
+                  </Label>
+                </div>
+                
+                <Button 
+                  type="submit"
+                  className="w-full btn-primary py-6 text-lg"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Logging in...' : 'Log In'}
+                </Button>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="rememberMe"
-                  checked={formData.rememberMe}
-                  onCheckedChange={handleCheckboxChange}
-                />
-                <Label htmlFor="rememberMe" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Remember me
-                </Label>
-              </div>
-
-              <Button 
-                type="submit"
-                className="w-full btn-primary py-6 text-lg"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Logging in...' : 'Log In'}
-              </Button>
-
-              <div className="relative flex items-center justify-center">
+              
+              <div className="relative flex items-center justify-center mt-6">
                 <div className="border-t border-gray-300 flex-grow"></div>
                 <span className="mx-4 text-gray-500 text-sm">or continue with</span>
                 <div className="border-t border-gray-300 flex-grow"></div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 mt-6">
                 <Button type="button" variant="outline" className="flex items-center justify-center space-x-2 border hover:bg-gray-50">
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path

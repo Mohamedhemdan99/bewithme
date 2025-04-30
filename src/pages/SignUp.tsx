@@ -1,19 +1,19 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { SignUpFormData } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
+import {  SignUpFormData } from '../services/authService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, EyeOff, User, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-
+import { request } from 'http';
+ 
 const initialFormData: SignUpFormData = {
-  picture: null,
-  firstName: '',
-  lastName: '',
+  ProfileImage: null,
+  fullName:'',
   username: '',
   email: '',
   password: '',
@@ -22,10 +22,11 @@ const initialFormData: SignUpFormData = {
   dateOfBirth: '',
   role: 'helper',
 };
-
 const SignUp = () => {
   const { register, isLoading } = useAuth();
   const [formData, setFormData] = useState<SignUpFormData>(initialFormData);
+  const [firstname,setFirstName] = useState<string>('');
+  const [lastname,setLastName] = useState<string>('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -38,6 +39,7 @@ const SignUp = () => {
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user starts typing
     if (errors[name]) {
@@ -52,11 +54,11 @@ const SignUp = () => {
       setErrors(prev => ({...prev, [name]: ''}));
     }
   };
-  
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setFormData((prev) => ({ ...prev, picture: file }));
+      setFormData((prev) => ({ ...prev,ProfileImage: file }));
       
       // Create a preview
       const reader = new FileReader();
@@ -70,11 +72,11 @@ const SignUp = () => {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
     
-    if (!formData.firstName) {
+    if (!firstname) {
       newErrors.firstName = 'First name is required';
     }
     
-    if (!formData.lastName) {
+    if (!lastname) {
       newErrors.lastName = 'Last name is required';
     }
     
@@ -102,6 +104,19 @@ const SignUp = () => {
     
     if (!day || !month || !year) {
       newErrors.dateOfBirth = 'Date of birth is required';
+    } else {
+      const yearValue = parseInt(year);
+      if (yearValue < 1900 || yearValue > new Date().getFullYear()) {
+        newErrors.dateOfBirth = 'Please enter a valid year between 1900 and ' + new Date().getFullYear();
+      }
+      const monthValue = parseInt(month);
+      if (monthValue < 1 || monthValue > 12) {
+        newErrors.dateOfBirth = 'Please enter a valid month (1-12)';
+      }
+      const dayValue = parseInt(day);
+      if (dayValue < 1 || dayValue > 31) {
+        newErrors.dateOfBirth = 'Please enter a valid day (1-31)';
+      }
     }
     
     setErrors(newErrors);
@@ -111,21 +126,25 @@ const SignUp = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Combine day, month, year into dateOfBirth string
-    if (day && month && year) {
-      const dateOfBirth = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      setFormData(prev => ({ ...prev, dateOfBirth }));
-      formData.dateOfBirth = dateOfBirth;
-    }
-    
     if (!validateForm()) {
       return;
     }
 
     try {
-      await register(formData);
+      // Create the request data
+      const requestData: SignUpFormData = {
+        ...formData,
+        fullName: `${firstname} ${lastname}`,
+        dateOfBirth: `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`,
+      };
+
+      await register(requestData);
+      // toast.success('Sign up successful', { icon: '🎉' });
+      // Redirect to login page
+      // navigate('/login');
     } catch (error) {
       console.error('Sign up error:', error);
+      toast.error('Failed to sign up',{icon: '⚠️'});
     }
   };
 
@@ -165,14 +184,15 @@ const SignUp = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label className='text-black block mb-1' htmlFor="firstName">First Name</Label>
                   <Input
                     id="firstName"
                     name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
+                    value={firstname}
+                    onChange={(e) => setFirstName(e.target.value)}
                     placeholder="First Name"
-                    className={errors.firstName ? "border-red-500" : ""}
+                    className={"border-red-500"}
+                    style={{borderColor: errors.firstName? "red" : "gray"}}
                   />
                   {errors.firstName && (
                     <p className="input-error">{errors.firstName}</p>
@@ -180,12 +200,12 @@ const SignUp = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName" className='text-black block mb-1'>Last Name</Label>
                   <Input
                     id="lastName"
                     name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
+                    value={lastname}
+                    onChange={(e) => setLastName(e.target.value)}
                     placeholder="Last Name"
                     className={errors.lastName ? "border-red-500" : ""}
                   />
@@ -276,7 +296,7 @@ const SignUp = () => {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 text-black md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gender</Label>
                   <Select
@@ -289,7 +309,6 @@ const SignUp = () => {
                     <SelectContent>
                       <SelectItem value="male">Male</SelectItem>
                       <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.gender && (
@@ -342,11 +361,9 @@ const SignUp = () => {
                       value={year}
                       onChange={(e) => {
                         const value = e.target.value.replace(/\D/g, '');
-                        if (value === '' || (parseInt(value) >= 1900 && parseInt(value) <= new Date().getFullYear())) {
-                          setYear(value);
-                          if (errors.dateOfBirth) {
-                            setErrors(prev => ({...prev, dateOfBirth: ''}));
-                          }
+                        setYear(value);
+                        if (errors.dateOfBirth) {
+                          setErrors(prev => ({...prev, dateOfBirth: ''}));
                         }
                       }}
                       className={errors.dateOfBirth ? "border-red-500" : ""}

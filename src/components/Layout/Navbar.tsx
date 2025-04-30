@@ -1,114 +1,137 @@
-
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Bell, User } from 'lucide-react';
+import { Bell, User, Globe } from 'lucide-react';
+import { useSignalR } from "../../hooks/useSignalR";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-const Navbar = () => {
+// const serverURL = "https://localhost:1190/";
+const serverURL = "https://bewtihme-001-site1.jtempurl.com/";
+
+
+const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
+  const { hasUnreadNotifications } = useSignalR();
+  const navigate = useNavigate();
   const location = useLocation();
+  const logoImage = "uploads/imgs/logo.png";
+  const defaultImageUrl = "uploads/imgs/default.jpg";
 
   return (
-    <header className="glass-nav sticky top-0 z-50 py-4 px-6">
-      <div className="container mx-auto flex items-center justify-between">
-        <Link to="/" className="text-2xl font-bold text-blue-500">
-          BeWithMe
-        </Link>
+    <nav className="bg-white shadow-sm fixed w-full z-50 top-0">
+      <div className="container mx-auto px-4 py-2">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center">
+              <img
+                src={`${serverURL+logoImage}`}
+                alt="App Logo"
+                className="h-10 transform scale-125"
+              />
+            </Link>
+          </div>
 
-        <nav className="hidden md:flex items-center space-x-6">
-          {isAuthenticated ? (
-            <>
-              <Link
-                to="/home"
-                className={`nav-link ${location.pathname === '/home' ? 'active' : ''}`}
-              >
-                Home
-              </Link>
-              <Link
-                to="/people"
-                className={`nav-link ${location.pathname === '/people' ? 'active' : ''}`}
-              >
-                People
-              </Link>
-              <Link
-                to="/profile"
-                className={`nav-link ${location.pathname === '/profile' ? 'active' : ''}`}
-              >
-                Profile
-              </Link>
-              <Link
-                to="/history"
-                className={`nav-link ${location.pathname === '/history' ? 'active' : ''}`}
-              >
-                History
-              </Link>
-            </>
-          ) : (
-            <>
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center space-x-6">
+            {isAuthenticated ? (
+              <>
+                <Link
+                  to="/translation"
+                  className={`nav-link ${location.pathname === '/translation' ? 'active' : ''}`}
+                >
+                  <Globe className="h-4 w-4 inline-block mr-1" />
+                  Translate
+                </Link>
+                <Link
+                  to="/home"
+                  className={`nav-link ${location.pathname === '/home' ? 'active' : ''}`}
+                >
+                  Home
+                </Link>
+                <Link
+                  to="/Brother"
+                  className={`nav-link ${location.pathname === '/Brother' ? 'active' : ''}`}
+                >
+                  Brothers
+                </Link>
+                <Link
+                  to="/history"
+                  className={`nav-link ${location.pathname === '/history' ? 'active' : ''}`}
+                >
+                  History
+                </Link>
+                <Link
+                  to="/Profile"
+                  className={`nav-link ${location.pathname === '/Profile' ? 'active' : ''}`}
+                >
+                  Profile
+                </Link>
+              </>
+            ) : (
               <Link
                 to="/"
                 className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
               >
                 Home
               </Link>
-              <Link
-                to="/about"
-                className={`nav-link ${location.pathname === '/about' ? 'active' : ''}`}
-              >
-                About
-              </Link>
-            </>
-          )}
-        </nav>
+            )}
+          </div>
 
-        <div className="flex items-center space-x-4">
-          {isAuthenticated ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative text-gray-600 hover:text-blue-500"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-              </Button>
-              
-              <Link to="/profile" className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 border border-gray-300">
-                  {user?.picture ? (
-                    <img
-                      src={user.picture}
-                      alt={`${user.firstName} ${user.lastName}`}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-full h-full p-1 text-gray-400" />
-                  )}
+          {/* User Actions */}
+          <div className="flex items-center space-x-4">
+            {isAuthenticated ? (
+              <>
+                <div className="relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/notifications')}
+                    className="relative"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {hasUnreadNotifications && (
+                      <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full" />
+                    )}
+                  </Button>
                 </div>
-              </Link>
-              
-              <Button
-                variant="ghost"
-                className="text-gray-700 hover:text-blue-500"
-                onClick={logout}
-              >
-                Logout
-              </Button>
-            </>
-          ) : (
-            <>
-              <Link to="/login">
-                <Button variant="outline" className="btn-secondary">Log in</Button>
-              </Link>
-              <Link to="/signup">
-                <Button className="btn-primary">Sign up</Button>
-              </Link>
-            </>
-          )}
+
+                <div className="relative group">
+                  <Avatar className="h-8 w-8 cursor-pointer">
+                    <AvatarImage onClick={() => navigate('/profile')}
+                      src={user?.profileImageUrl ? `${serverURL}${user.profileImageUrl}` : `${serverURL}${defaultImageUrl}`}
+                      alt={user?.fullName || 'User'}
+                    
+                    />
+                    <AvatarFallback>
+                      <User className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  className="text-red-700 hover:text-red-500"
+                  onClick={logout}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link to="/login">
+                  <Button variant="ghost">Log in</Button>
+                </Link>
+                <Link to="/signup">
+                  <Button>Sign up</Button>
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </header>
+    </nav>
   );
 };
 

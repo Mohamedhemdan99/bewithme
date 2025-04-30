@@ -1,14 +1,13 @@
 
-import axios from 'axios';
 import { toast } from "sonner";
+import axios from "axios";
+import api  from "./axiosService";
 
-const API_BASE_URL = "https://bewtihme-001-site1.jtempurl.com/api/Account";
 
-// Types
+
 export interface SignUpFormData {
-  picture: File | null;
-  firstName: string;
-  lastName: string;
+  ProfileImage?: File | null;
+  fullName?: string;
   username: string;
   email: string;
   password: string;
@@ -24,38 +23,6 @@ export interface LoginFormData {
   rememberMe: boolean;
 }
 
-export interface UserProfile {
-  id: string;
-  firstName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  picture: string;
-  gender: string;
-  dateOfBirth: string;
-  role: string;
-  rating: number;
-}
-
-// For profile updates with optional file uploads
-export interface EditableUserProfile extends Partial<Omit<UserProfile, 'picture'>> {
-  picture?: File | string | null;
-  password?: string;
-}
-
-// Create axios instance
-const api = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-// Add authorization header for authenticated requests
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 export const authService = {
   // Register new user
@@ -63,20 +30,30 @@ export const authService = {
     try {
       // Create FormData object
       const data = new FormData();
-      if (formData.picture) {
-        data.append('picture', formData.picture);
+      
+      // Append profile image if exists
+      if (formData.ProfileImage) {
+        data.append('ProfileImage', formData.ProfileImage);
       }
-      data.append('firstName', formData.firstName);
-      data.append('lastName', formData.lastName);
+
+      // Append other form fields
+      if (formData.fullName) {
+        data.append('fullName', formData.fullName);
+      }
       data.append('username', formData.username);
       data.append('email', formData.email);
-      data.append('password', formData.password);
+      data.append('Password', formData.password);
       data.append('confirmPassword', formData.confirmPassword);
       data.append('gender', formData.gender);
       data.append('dateOfBirth', formData.dateOfBirth);
       data.append('role', formData.role);
 
-      const response = await api.post('/Register', data);
+      const response = await api.post('/api/Account/Register', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -87,22 +64,36 @@ export const authService = {
     }
   },
 
-  // Login user
+  //Login user  Done✔ and store the token and userId
   async login(loginData: LoginFormData) {
     try {
-      const response = await api.post('/Login', loginData);
+      const response = await api.post('/api/Account/Login', loginData);
+      
+      // console.log(response.data);
       
       // Save token and user data in localStorage
-      if (response.data && response.data.token) {
+      if (response.data?.token && response.data.userId !== null ) {
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('userId', response.data.userId);
+  
+          toast.success('Logged in successfully',{icon: "✅"});
+          // Start SignalR connection
+          // await signalRService.startConnection();
+          // // Start SignalR connection
+          // await   signalRService.joinOnlineHelpersGroup();
+          // console.log("Joined OnlineHelpersGroup");
+
+        } else {
+          console.error('Invalid user data structure:', response.data.user);
+          toast.error('Received invalid user data from server');
+        
       }
       
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const message = error.response?.data?.message || 'Login failed';
-        toast.error(message);
+        toast.error(message,{icon: "❌"});
       }
       throw error;
     }
@@ -111,79 +102,42 @@ export const authService = {
   // Logout user
   logout() {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('userId');
   },
 
   // Check if user is authenticated
   isAuthenticated() {
+    // check it token in the cookeis 
+    if (document.cookie.includes('token=')) {
+      return true;
+    }
     return !!localStorage.getItem('token');
   },
 
-  // Get current user data
-  getCurrentUser(): UserProfile | null {
-    const userDataString = localStorage.getItem('user');
-    if (!userDataString) return null;
-    
-    try {
-      return JSON.parse(userDataString);
-    } catch (error) {
-      console.error('Error parsing user data from localStorage:', error);
-      return null;
+async sendCode(email: string){
+  try {
+    const response = await api.post('/api/Account/SendCode', { email });
+    if(response.status === 200){
+      console.log("Code sent successfully")
     }
-  },
-
-  // Update user profile
-  async updateProfile(userData: EditableUserProfile) {
-    try {
-      const data = new FormData();
-      
-      // Append all user data that's being updated
-      Object.entries(userData).forEach(([key, value]) => {
-        if (key === 'picture' && value instanceof File) {
-          data.append(key, value);
-        } else if (value !== null && value !== undefined) {
-          data.append(key, String(value));
-        }
-      });
-
-      const response = await api.put('/UpdateProfile', data);
-      
-      // Update local storage with new user data
-      const currentUser = this.getCurrentUser();
-      if (currentUser) {
-        const updatedUser = { ...currentUser, ...response.data };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-      }
-      
-      return response.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.message || 'Profile update failed';
-        toast.error(message);
-      }
-      throw error;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data?.message || 'Failed to send verification code';
+      toast.error(message);
     }
-  },
-
-  // Request password reset
-  async requestPasswordReset(email: string) {
-    try {
-      await api.post('/ForgotPassword', { email });
-      return true;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.message || 'Failed to request password reset';
-        toast.error(message);
-      }
-      throw error;
-    }
-  },
+    throw error;
+  }
+},
 
   // Verify reset code
   async verifyResetCode(email: string, code: string) {
     try {
-      await api.post('/VerifyResetCode', { email, code });
-      return true;
+      const response =await api.post('/api/Account/VerifyCode', { email, code });
+if(response.status === 200){
+  console.log("Code verified successfully",response.data.resetToken);
+  return response.data.resetToken;
+
+}
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const message = error.response?.data?.message || 'Invalid verification code';
@@ -194,15 +148,18 @@ export const authService = {
   },
 
   // Reset password
-  async resetPassword(email: string, code: string, newPassword: string, confirmPassword: string) {
+  async resetPassword(email: string, resetToken: string, newPassword: string, confirmPassword: string) {
     try {
-      await api.post('/ResetPassword', { 
+     const response = await api.post('/api/Account/ResetPassword', { 
         email, 
-        code, 
-        newPassword, 
-        confirmPassword 
+        Token:resetToken,
+        Password: newPassword, 
+        ConfirmPassword: confirmPassword 
       });
-      return true;
+      if(response.status === 200){
+        console.log("Password reset successfully",response.data);
+      }
+      return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const message = error.response?.data?.message || 'Password reset failed';

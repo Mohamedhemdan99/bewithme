@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner";
+import { authService } from '@/services/authService';
+import axios from 'axios';
 
 enum ForgotPasswordStep {
   EMAIL_REQUEST,
@@ -21,27 +23,28 @@ interface ForgotPasswordModalProps {
 const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClose }) => {
   const [step, setStep] = useState<ForgotPasswordStep>(ForgotPasswordStep.EMAIL_REQUEST);
   const [email, setEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
+  const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
-  
+  const [resetToken, setResetToken] = useState('');
   const handleClose = () => {
     onClose();
     // Reset the form after closing
     setTimeout(() => {
       setStep(ForgotPasswordStep.EMAIL_REQUEST);
       setEmail('');
-      setVerificationCode(['', '', '', '']);
+      setVerificationCode(['', '', '', '', '', '']);
       setNewPassword('');
       setConfirmPassword('');
       setEmailError('');
     }, 300);
   };
   
-  const handleSendCode = () => {
+
+  const handleSendCode = async () => {
     if (!email) {
       setEmailError('Please enter your email address');
       return;
@@ -52,24 +55,44 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
       return;
     }
     
-    // Mock API call
-    toast.success('Verification code sent to your email');
-    setStep(ForgotPasswordStep.VERIFICATION_CODE);
+    try {
+      await authService.sendCode(email);
+      toast.success('code sent to your email');
+      setStep(ForgotPasswordStep.VERIFICATION_CODE);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message || 'Failed to send verification code';
+        toast.error(message);
+      }
+      throw error;
+    }
   };
-  
-  const handleVerifyCode = () => {
+
+  const handleVerifyCode = async () => {
     const code = verificationCode.join('');
-    if (code.length !== 4) {
+    if (code.length !== 6) {
       toast.error('Please enter the complete verification code');
       return;
     }
     
-    // Mock API call
-    toast.success('Code verified successfully');
-    setStep(ForgotPasswordStep.NEW_PASSWORD);
+    try {
+      const response = await authService.verifyResetCode(email, code);
+        if(response){
+          console.log("Response: ",response);
+          setResetToken(response);
+        }
+      toast.success('Code verified successfully');
+      setStep(ForgotPasswordStep.NEW_PASSWORD);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message || 'Failed to verify verification code';
+        toast.error(message);
+      }
+      throw error;
+    }
   };
   
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!newPassword) {
       toast.error('Please enter a new password');
       return;
@@ -80,9 +103,19 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
       return;
     }
     
-    // Mock API call
-    toast.success('Password reset successfully');
-    handleClose();
+    try {
+      const response = await authService.resetPassword(email, resetToken, newPassword, confirmPassword);
+      if(response){
+        toast.success('Password reset successfully');
+        handleClose();
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.message || 'Failed to reset password';
+        toast.error(message);
+      }
+      throw error;
+    }
   };
   
   const handleCodeChange = (index: number, value: string) => {
@@ -96,7 +129,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
     setVerificationCode(newCode);
     
     // Auto-focus next input
-    if (value && index < 3) {
+    if (value && index < 5) {
       const nextInput = document.getElementById(`code-${index + 1}`);
       if (nextInput) {
         nextInput.focus();
@@ -184,7 +217,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen, onClo
               <span className="font-medium">{email}</span>
             </p>
             
-            <div className="flex justify-center gap-2 my-4">
+            <div className="flex justify-center gap-2 my-6">
               {verificationCode.map((digit, index) => (
                 <Input
                   key={index}
