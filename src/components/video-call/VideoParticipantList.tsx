@@ -8,6 +8,7 @@ interface VideoParticipantListProps {
   participants: any[];
   activeSpeakerId: string | null;
   pinnedParticipantId: string | null;
+  audioLevels: { [key: string]: number };
   onTogglePin: (participantId: string) => void;
 }
 
@@ -15,6 +16,7 @@ export const VideoParticipantList: React.FC<VideoParticipantListProps> = ({
   participants,
   activeSpeakerId,
   pinnedParticipantId,
+  audioLevels,
   onTogglePin,
 }) => {
 const { isMicOn, isVideoOn, toggleMic, toggleVideo } = useCallSettings();
@@ -60,10 +62,12 @@ const serverURL = AppConfig.baseUrl;
                 
                 {/* Active speaker indicator */}
                 {isActive && (
-                  <>
-                    <span className="absolute inset-0 rounded-full animate-pulse-ring border-2 border-video-primary"></span>
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-gray-900"></span>
-                  </>
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-video-primary/50">
+                    <div 
+                      className="h-full bg-video-primary transition-all duration-100"
+                      style={{ width: `${audioLevels[participant.id] || 0}%` }}
+                    />
+                  </div>
                 )}
               </div>
               

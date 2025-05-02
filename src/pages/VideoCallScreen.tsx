@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import { useSignalR } from "@/hooks/useSignalR";
 import api from "@/services/axiosService";
-import { CallSettingsProvider } from "@/contexts/CallSettingsContext";
+import { CallSettingsProvider, useCallSettings } from "@/contexts/CallSettingsContext";
 
 
 export const VideoCallScreen: React.FC = () => {
@@ -27,7 +27,8 @@ export const VideoCallScreen: React.FC = () => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [localAudioTrack, setLocalAudioTrack] = useState<any>(null);
   const [localVideoTrack, setLocalVideoTrack] = useState<any>(null);
-  
+  const [audioLevels, setAudioLevels] = useState<{ [key: string]: number }>({});
+
   // Simulate connecting to a call
   useEffect(() => {
     console.log("Appid",AppId);
@@ -35,6 +36,7 @@ export const VideoCallScreen: React.FC = () => {
     console.log("Uid",Uid);
     const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
     clientRef.current = client;
+
     const joinChannel = async () => {
       try {
         const appId = AppId; // Replace with your Agora App ID
@@ -108,6 +110,14 @@ export const VideoCallScreen: React.FC = () => {
               )
             );
           }
+          client.enableAudioVolumeIndicator();
+client.on("volume-indicator", (volumes) => {
+  const newLevels: { [key: string]: number } = {};
+  volumes.forEach((volume) => {
+    newLevels[volume.uid] = Math.min(100, Math.round(volume.level * 1.2));
+  });
+  setAudioLevels(newLevels);
+});
         });
 
         client.on("user-left", (user) => {
@@ -127,6 +137,8 @@ export const VideoCallScreen: React.FC = () => {
     return () => {
       if (clientRef.current) {
         clientRef.current.leave();
+        clientRef.current.leave();
+        clientRef.current.off("volume-indicator"); // Add this line
       }
     };
   }, [ChannelName]);
@@ -217,6 +229,7 @@ export const VideoCallScreen: React.FC = () => {
         />
       <div className="flex flex-1 overflow-hidden">
         <VideoContainer
+        audioLevels={audioLevels}
           participants={participants}
           activeSpeakerId={activeSpeaker}
           isScreenSharing={isScreenSharing}
@@ -229,6 +242,7 @@ export const VideoCallScreen: React.FC = () => {
           participants={participants}
           activeSpeakerId={activeSpeaker}
           pinnedParticipantId={pinnedParticipantId}
+          audioLevels={audioLevels}
           onTogglePin={togglePinForParticipant}
         />
       </div>

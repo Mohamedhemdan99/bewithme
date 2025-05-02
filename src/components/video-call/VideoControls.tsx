@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, MicOff, Video, VideoOff, Phone, Share, Users, MessageSquare, MoreVertical, Pin } from "lucide-react";
@@ -36,7 +35,10 @@ const { isMicOn, isVideoOn, toggleMic, toggleVideo } = useCallSettings();
                 variant="ghost"
                 size="icon"
                 className={`rounded-full p-3 ${isMicOn ? "bg-red-500 text-white hover:bg-red-600" : "bg-gray-700 text-white hover:bg-gray-600"}`}
-                onClick={toggleMic}
+                onClick={() => {
+                  toggleMic();
+                  onToggleMute();
+                }}
               >
                 {isMicOn ? <MicOff size={24} /> : <Mic size={24} />}
               </Button>
@@ -54,7 +56,10 @@ const { isMicOn, isVideoOn, toggleMic, toggleVideo } = useCallSettings();
                 variant="ghost"
                 size="icon"
                 className={`rounded-full p-3 ${isVideoOn ? "bg-gray-700 text-white hover:bg-gray-600" : "bg-red-500 text-white hover:bg-red-600"}`}
-                onClick={toggleVideo}
+                onClick={() => {
+                  toggleVideo();
+                  onToggleVideo();
+                }}
               >
                 {isVideoOn ? <Video size={24} /> : <VideoOff size={24} />}
               </Button>

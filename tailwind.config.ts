@@ -118,9 +118,19 @@ export default {
 				  "0%": { transform: "scale(0.8)", opacity: "0" },
 				  "50%": { opacity: "0.5" },
 				  "100%": { transform: "scale(1.5)", opacity: "0" }
-				}
+				},
+				"speaking-pulse": {
+                    "0%, 100%": { boxShadow: "0 0 0 0 rgba(155, 135, 245, 0.4)" },
+                    "70%": { boxShadow: "0 0 0 12px rgba(155, 135, 245, 0)" },
+				},
+
+				// "accordion-down": {
+                //     from: { height: "0" },
+                //     to: { height: "var(--radix-accordion-content-height)" },
+                // },
 			},
 			animation: {
+				"speaking-pulse": "speaking-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-in-out',

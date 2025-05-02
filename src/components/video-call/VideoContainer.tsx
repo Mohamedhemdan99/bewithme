@@ -12,6 +12,7 @@ interface VideoContainerProps {
   pinnedParticipantId: string | null;
   onTogglePin: (participantId: string) => void;
   className?: string;
+  audioLevels: { [key: string]: number };
 }
 
 export const VideoContainer: React.FC<VideoContainerProps> = ({
@@ -19,6 +20,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   activeSpeakerId,
   isScreenSharing,
   selfVideoEnabled,
+  audioLevels,
   pinnedParticipantId,
   onTogglePin,
   className,
@@ -119,14 +121,20 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
                     opacity: 0
                   }}
                 >
-                  <div className={`absolute inset-0 ${isActive ? 'ring-2 ring-video-primary' : ''} ${isPinned ? 'ring-2 ring-video-primary' : ''} rounded-lg`}>
-                    <ParticipantVideo participant={participant} />
-                  </div>
+                 <div className={`absolute inset-0 ${isActive ? 'ring-2 ring-video-primary' : ''} ${isPinned ? 'ring-2 ring-video-primary' : ''} rounded-lg`}>
+                 <ParticipantVideo participant={participant} />
+                 </div>
                   
                   {/* Active speaker indicator */}
-                  {isActive && !isPinned && (
-                    <div className="absolute inset-0 border-2 border-video-primary rounded-lg animate-pulse"></div>
-                  )}
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-video-primary/20">
+                    <div 
+                      className="h-full bg-video-primary transition-all duration-100"
+                      style={{ 
+                        width: `${audioLevels[participant.id] || 0}%`,
+                        opacity: audioLevels[participant.id] ? 0.8 : 0 
+                      }}
+                    />
+                  </div>
                   
                   {/* Pin button */}
                   <button

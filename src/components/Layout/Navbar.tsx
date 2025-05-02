@@ -16,7 +16,7 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const logoImage = "uploads/imgs/logo.png";
-  const defaultImageUrl = "uploads/imgs/default.jpg";
+  const defaultImageUrl = "uploads/imgs/default.png";
 
   console.log("Navbar Profile Image URL:", user?.profileImageUrl)
 
