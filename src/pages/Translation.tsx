@@ -135,6 +135,7 @@ const PROXY_URL = "https://bewtihme-001-site1.jtempurl.com/api/sync/generate";
     try {
       const payload = {
         model: "lipsync-1.7.1",
+        // model: "lipsync-2",
         input: [
           { url: VIDEO_URL, type: "video" },
           { url: audioUrl, type: "audio" }
