@@ -65,7 +65,7 @@ export const profileService = {
       if (response.data.profileImageUrl) {
         localStorage.setItem('profileImageUrl', JSON.stringify(response.data.profileImageUrl));
       }
-  
+      
       // Store the full user data in localStorage
       localStorage.setItem('user', JSON.stringify(response.data));
       // console.log(JSON.parse(localStorage.getItem('user')))
